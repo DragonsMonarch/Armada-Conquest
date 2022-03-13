@@ -5,12 +5,13 @@ using UnityEngine;
 
 public class SelectObjects : MonoBehaviour
 {
+	//TODO сократить количество циклов и условий (оптимизировать)
 	public static List<GameObject> unitRedTeam; //юниты красной команды
 	public static List<GameObject> unitBlueTeam; //юниты синей команды
 	public static List<GameObject> unitRedTeamSelected; //выделенные юниты красной команды
 	public static List<GameObject> unitBlueTeamSelected; // выделенные юниты синей команды
-	public static List<GameObject> unitConfirmed;
 
+	//выбор скина для выделения
 	public GUISkin skin;
 	private Rect rect;
 	private bool draw;
@@ -25,7 +26,6 @@ public class SelectObjects : MonoBehaviour
 		unitRedTeam = new List<GameObject>();
 		unitRedTeamSelected = new List<GameObject>();
 		unitBlueTeamSelected = new List<GameObject>();
-		unitConfirmed = new List<GameObject>();
 	}
 
 	// проверка, добавлен объект или нет
@@ -48,7 +48,8 @@ public class SelectObjects : MonoBehaviour
 		return result;
 	}
 
-	void Select()
+	//TODO оптимизировать кол-во циклов и условий
+	private void Select()
 	{
 		if(unitBlueTeamSelected.Count > 0)
 		{
@@ -68,7 +69,8 @@ public class SelectObjects : MonoBehaviour
 		}
 	}
 
-	void Deselect()
+	//TODO оптимизировать кол-во циклов и условий
+	private void Deselect()
 	{
 		if(unitBlueTeamSelected.Count > 0)
 		{
@@ -86,35 +88,48 @@ public class SelectObjects : MonoBehaviour
 				unitRedTeamSelected[j].GetComponent<MeshRenderer>().material.color = Color.red;
 			}
 		}
-		unitConfirmed.Clear();
+		for (int i = 0; i < unitBlueTeam.Count; i++)
+		{
+			unitBlueTeam[i].gameObject.GetComponent<MeshRenderer>().material.color = Color.blue;
+		}
+		for (int i = 0; i < unitRedTeam.Count; i++)
+		{
+			unitRedTeam[i].gameObject.GetComponent<MeshRenderer>().material.color = Color.red;
+		}
+		//приводим к нулю чтобы данные передовлись корректно
 		selectedBlueTeamUnit = null;
 		selectedRedTeamUnit = null;
 	}
-
-	//TODO сделать переключение выбранных целей
-	void Confirm()
+	
+	//TODO сделать все одним циклом
+	private void Confirm()
 	{
+		//подтверждение выделения юнита для красной команды
 		RaycastHit hit;
 		for(int j = 0; j < unitRedTeamSelected.Count; j++)
 		{
 			if (unitRedTeamSelected[j].GetComponent<MeshRenderer>().material.color == Color.green)
 			{
+				//отправляем луч в сторону курсора чтобы проверить есть ли там объект, если есть, подтверждаем его выбор
 				Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 				if (Physics.Raycast(ray, out hit))
 				{
 					if (hit.transform.gameObject.GetComponent<UnitRedTeam>())
 					{
-						unitConfirmed.Add(hit.transform.gameObject);
+						unitRedTeamSelected.Remove(hit.transform.gameObject);
 						hit.transform.GetComponent<MeshRenderer>().material.color = Color.magenta;
 						selectedRedTeamUnit = hit.transform.gameObject;
+						//если есть дочерние элементы, также их подтверждаем
 						for (int i = 0; i < hit.transform.childCount; i++)
 						{
 							hit.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = Color.magenta;
+							unitRedTeamSelected.Remove(hit.transform.GetChild(i).gameObject);
 						}
 					}
 				}
 			}
 		}
+		//все тоже самое для красной команды
 		for(int j = 0; j < unitBlueTeamSelected.Count; j++)
 		{
 			if (unitBlueTeamSelected[j].GetComponent<MeshRenderer>().material.color == Color.yellow)
@@ -124,12 +139,13 @@ public class SelectObjects : MonoBehaviour
 				{
 					if (hit.transform.gameObject.GetComponent<UnitBlueTeam>())
 					{
-						unitConfirmed.Add(hit.transform.gameObject);
+						unitBlueTeamSelected.Remove(hit.transform.gameObject);
 						hit.transform.GetComponent<MeshRenderer>().material.color = Color.cyan;
 						selectedBlueTeamUnit = hit.transform.gameObject;
 						for (int i = 0; i < hit.transform.childCount; i++)
 						{
 							hit.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = Color.cyan;
+							unitBlueTeamSelected.Remove(hit.transform.GetChild(i).gameObject);
 						}
 					}
 				}
@@ -137,14 +153,20 @@ public class SelectObjects : MonoBehaviour
 		}
 	}
 
-	void ChangeConfirm()
+	//метод отмены выделения при подтверждении выбора юнита
+	private void IsCancelled()
 	{
-		unitConfirmed[0].GetComponent<MeshRenderer>().material.color = Color.blue;
-		unitConfirmed.Clear();
-		Confirm();
+		for (int i = 0; i < unitBlueTeamSelected.Count; i++)
+		{
+			unitBlueTeamSelected[i].GetComponent<MeshRenderer>().material.color = Color.blue;
+		}
+		for (int i = 0; i < unitRedTeamSelected.Count; i++)
+		{
+			unitRedTeamSelected[i].GetComponent<MeshRenderer>().material.color = Color.red;
+		}
 	}
-
-	//TODO сделать выведение иноформации о выбранном юните
+	
+	//гетеры для получения выбранных объектов
 	public GameObject getSelectedRedTeamUnit()
 	{
 		return selectedRedTeamUnit;
@@ -160,28 +182,21 @@ public class SelectObjects : MonoBehaviour
 		GUI.skin = skin;
 		GUI.depth = 99;
 		
+		//отмена выделения
 		if (Input.GetMouseButtonDown(0))
 		{
 			Deselect();
 			startPos = Input.mousePosition;
 			draw = true;
 		}
-
-		if (unitConfirmed.Count == 0)
-		{
-			if (Input.GetKeyDown(KeyCode.E))
-			{
-				Confirm();
-				Debug.Log(selectedBlueTeamUnit);
-				Debug.Log(selectedRedTeamUnit);
-			}
+		//подтверждение выбора
+		if (Input.GetKeyDown(KeyCode.E)) 
+		{ 
+			Confirm(); 
+			IsCancelled();
 		}
 
-		if (unitConfirmed.Count > 1)
-		{
-			ChangeConfirm();
-		}
-		
+		//выделение
 		if (Input.GetMouseButtonUp(0))
 		{
 			draw = false;
@@ -202,6 +217,7 @@ public class SelectObjects : MonoBehaviour
 
 			GUI.Box(rect, "");
 
+			//TODO оптисмизировать при возможности
 			for (int j = 0; j < unitBlueTeam.Count; j++)
 			{
 				// трансформируем позицию объекта из мирового пространства, в пространство экрана
