@@ -8,6 +8,9 @@ public class UnitSelect : MonoBehaviour
     public static List<GameObject> unitSelected; // массив выделенных юнитов
     public static List<GameObject> ownUnitChoosed;
     public static List<GameObject> enemyUnitChoosed;
+    public static List<GameObject> unitOwnTeam;
+    public static List<GameObject> unitEnemyTeam;
+
 
 
     public GUISkin skin;
@@ -15,6 +18,8 @@ public class UnitSelect : MonoBehaviour
     private bool draw;
     private Vector2 startPos;
     private Vector2 endPos;
+    Ray ray;
+    RaycastHit hit;
 
     void Awake()
     {
@@ -22,6 +27,8 @@ public class UnitSelect : MonoBehaviour
         unitSelected = new List<GameObject>();
         ownUnitChoosed = new List<GameObject>();
         enemyUnitChoosed = new List<GameObject>();
+        unitOwnTeam = new List<GameObject>();
+        unitEnemyTeam = new List<GameObject>();
     }
     bool CheckUnit(GameObject unit)
     {
@@ -56,8 +63,11 @@ public class UnitSelect : MonoBehaviour
             }
         }
         unitSelected.Clear();
-        ownUnitChoosed.Clear();
-        enemyUnitChoosed.Clear();
+        if (ownUnitChoosed.Count > 0 || enemyUnitChoosed.Count > 0)
+        {
+            ownUnitChoosed.Remove(ownUnitChoosed[0]);
+            enemyUnitChoosed.Remove(enemyUnitChoosed[0]);
+        }
     }
 
     void ChooseOwnUnit()
@@ -136,10 +146,17 @@ public class UnitSelect : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.E))
         {
-            ChooseOwnUnit();
-            ChooseEnemyUnit();
-            Debug.Log(GetOwnUnit());
-            Debug.Log(GetEnemyUnit());
+            Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 1000);
+            for (int i = 0; i < unitSelected.Count; i++)
+            {
+                if(hit.transform.GetComponent<Unit>() || hit.transform == unitSelected[i])
+                {
+                    ChooseOwnUnit();
+                    ChooseEnemyUnit();
+                    Debug.Log(GetOwnUnit());
+                    Debug.Log(GetEnemyUnit());
+                }
+            }
         }
         
         if (draw)
